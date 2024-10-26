@@ -1,0 +1,129 @@
+# %%
+import os
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+from sklearn.model_selection import train_test_split
+
+
+
+# %%
+train_dir = "animals/train"  # replace with your data path
+test_dir = "animals/test"
+
+# Data augmentation and data loading
+train_datagen = ImageDataGenerator(rescale=1./255, validation_split=0.2)
+
+train_generator = train_datagen.flow_from_directory(
+    train_dir,
+    target_size=(128, 128),
+    batch_size=32,
+    class_mode='binary',
+    subset='training'
+)
+
+validation_generator = train_datagen.flow_from_directory(
+    test_dir,
+    target_size=(128, 128),
+    batch_size=32,
+    class_mode='binary',
+    subset='validation'
+)
+
+
+# %%
+model = Sequential([
+    Conv2D(32, (3, 3), activation='relu', input_shape=(128, 128, 3)),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation='relu'),
+    MaxPooling2D((2, 2)),
+    Conv2D(128, (3, 3), activation='relu'),
+    MaxPooling2D((2, 2)),
+    Flatten(),
+    Dense(128, activation='relu'),
+    Dropout(0.5),
+    Dense(1, activation='sigmoid')
+])
+
+
+# %%
+model.compile(optimizer='adam',
+              loss='binary_crossentropy',
+              metrics=['accuracy'])
+
+
+# %%
+epochs = 10
+history = model.fit(
+    train_generator,
+    validation_data=validation_generator,
+    epochs=epochs
+)
+
+
+# %%
+loss, accuracy = model.evaluate(validation_generator)
+print(f"Validation Loss: {loss}")
+print(f"Validation Accuracy: {accuracy}")
+
+
+# %%
+model.save("cat_dog_classifier.h5")
+
+
+# %%
+
+import matplotlib.pyplot as plt
+
+# Plot training and validation accuracy
+plt.plot(history.history['accuracy'], label='Training Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy')
+plt.title('Training and Validation Accuracy')
+plt.legend()
+plt.show()
+
+# Plot training and validation loss
+plt.plot(history.history['loss'], label='Training Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.title('Training and Validation Loss')
+plt.legend()
+plt.show()
+
+
+# %%
+from tensorflow.keras.preprocessing import image
+# List of paths to external images for testing
+test_image_paths = [r"D:\MODULE PROJECTS\CONVNET2\dog vs cat\cat_or_dog6.jpg",r"D:\MODULE PROJECTS\CONVNET2\dog vs cat\cat_or_dog_1.jpg"]  # Replace with your image paths
+
+def load_and_display_image(img_path, model):
+    # Load and preprocess the image
+    img = image.load_img(img_path, target_size=(128, 128))
+    img_array = image.img_to_array(img)
+    img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
+    img_array /= 255.0  # Normalize like in training
+
+    # Make a prediction
+    prediction = model.predict(img_array)
+    class_label = "Dog" if prediction[0] > 0.5 else "Cat"
+
+    # Display the image with the prediction label
+    plt.imshow(image.load_img(img_path))
+    plt.title(f"Prediction: {class_label}")
+    plt.axis('off')
+    plt.show()
+
+# Test each image in the list
+for img_path in test_image_paths:
+    load_and_display_image(img_path, model)
+
+
+# %%
+
+
+
